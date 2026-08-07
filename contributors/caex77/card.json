@@ -1,0 +1,11 @@
+{
+  "name": "Ling Da Lin",
+  "role": "CS Student",
+  "university": "University of Kent",
+  "github": "caex77",
+  "bio": "2nd year CS student working towards being a webdev or gamedev. I love building ",
+  "tags": ["Java", "JavaScript", "Web Development", "React", "TailwindCSS"],
+  "links": {
+    "website": "https://your-site.example.com"
+  }
+}
