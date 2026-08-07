@@ -156,3 +156,66 @@ section.block h2::before {
 [data-theme="light"] .pill[data-pill="react"] { --pill-color: #e08a3f; }
 [data-theme="light"] .pill[data-pill="oss"] { --pill-color: #2fa88f; }
 [data-theme="light"] .pill[data-pill="bayes"] { --pill-color: #8a63e6; }
+
+.anime-card {
+  margin-top: 1rem;
+  padding: 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(255, 92, 179, 0.16), rgba(77, 139, 255, 0.12));
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
+}
+
+.anime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.anime-label {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.anime-clue {
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  margin-bottom: 1rem;
+}
+
+.anime-clue p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.anime-controls {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.anime-controls input {
+  flex: 1;
+  min-width: 220px;
+  padding: 0.7rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.anime-message {
+  margin: 0.95rem 0 0.7rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
