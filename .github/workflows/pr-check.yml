@@ -12,6 +12,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+      # This is the base branch, not the PR. The PR's own files are read over
+      # the API — see .github/scripts/read-pr-file.js.
       - name: Checkout base repo (for scripts)
         uses: actions/checkout@v4
 
@@ -28,29 +30,39 @@ jobs:
                 pull_number: context.payload.pull_request.number,
               }
             );
-            const paths = files.map((f) => f.filename);
-            core.setOutput("paths", JSON.stringify(paths));
-            return paths;
+            // `status` tells a deleted file apart from one we failed to read.
+            const entries = files.map((f) => ({ path: f.filename, status: f.status }));
+            core.setOutput("files", JSON.stringify(entries));
+            return entries;
 
       - name: Validate card.json files
         id: validate
         uses: actions/github-script@v7
+        # Filenames come from the PR author, so they go through the environment.
+        # Interpolating them into the script body would run them as code.
+        env:
+          PR_FILES: ${{ steps.changed.outputs.files }}
         with:
           script: |
-            const fs = require("fs");
-            const paths = JSON.parse('${{ steps.changed.outputs.paths }}');
-            const cardFiles = paths.filter((p) => /^contributors\/[^/]+\/card\.json$/.test(p));
+            const readPrFile = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/read-pr-file.js`)(github, context);
+            const entries = JSON.parse(process.env.PR_FILES || "[]");
+            const cardFiles = entries.filter((f) => /^contributors\/[^/]+\/card\.json$/.test(f.path));
 
             const errors = [];
             const warnings = [];
             const REQUIRED_FIELDS = ["name", "github", "bio", "tags"];
 
-            for (const file of cardFiles) {
+            for (const { path: file, status } of cardFiles) {
+              if (status === "removed") {
+                errors.push(`\`${file}\` was deleted — that's the file that puts you on the grid.`);
+                continue;
+              }
+
               let raw;
               try {
-                raw = fs.readFileSync(file, "utf8");
+                raw = await readPrFile(file);
               } catch (e) {
-                errors.push(`Could not read \`${file}\` — did you delete it?`);
+                errors.push(`Could not read \`${file}\` from this PR: ${e.message}`);
                 continue;
               }
 
@@ -59,6 +71,12 @@ jobs:
                 json = JSON.parse(raw);
               } catch (e) {
                 errors.push(`\`${file}\` is not valid JSON: ${e.message}`);
+                continue;
+              }
+
+              // The checks below use `in`, which throws on anything but an object.
+              if (json === null || typeof json !== "object" || Array.isArray(json)) {
+                errors.push(`\`${file}\` must be a JSON object wrapped in \`{ }\`.`);
                 continue;
               }
 
@@ -73,7 +91,9 @@ jobs:
               }
 
               const folderUsername = file.split("/")[1];
-              if (json.github && json.github.toLowerCase() !== folderUsername.toLowerCase()) {
+              if ("github" in json && json.github != null && typeof json.github !== "string") {
+                errors.push(`\`${file}\`: \`"github"\` must be text in quotes, e.g. \`"your-username"\`.`);
+              } else if (json.github && json.github.toLowerCase() !== folderUsername.toLowerCase()) {
                 warnings.push(
                   `\`${file}\`: the \`"github"\` field ("${json.github}") doesn't match the folder name ("${folderUsername}").`
                 );
@@ -88,12 +108,14 @@ jobs:
       - name: Check PR scope (own folder only?)
         id: scope
         uses: actions/github-script@v7
+        env:
+          PR_FILES: ${{ steps.changed.outputs.files }}
         with:
           script: |
-            const paths = JSON.parse('${{ steps.changed.outputs.paths }}');
+            const entries = JSON.parse(process.env.PR_FILES || "[]");
             const author = context.payload.pull_request.user.login.toLowerCase();
 
-            const allowed = paths.every((p) => {
+            const allowed = entries.every(({ path: p }) => {
               if (p === "contributors/manifest.json") return true;
               const match = p.match(/^contributors\/([^/]+)\//);
               return match && match[1].toLowerCase() === author;
@@ -105,16 +127,25 @@ jobs:
       - name: Content & image safety check
         id: moderate
         uses: actions/github-script@v7
+        env:
+          PR_FILES: ${{ steps.changed.outputs.files }}
         with:
           script: |
             const fs = require("fs");
-            const paths = JSON.parse('${{ steps.changed.outputs.paths }}');
+            const readPrFile = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/read-pr-file.js`)(github, context);
+
+            const paths = JSON.parse(process.env.PR_FILES || "[]")
+              .filter((f) => f.status !== "removed")
+              .map((f) => f.path);
+
             const cardFiles = paths.filter((p) => /^contributors\/[^/]+\/card\.json$/.test(p));
             const htmlFiles = paths.filter((p) => /^contributors\/[^/]+\/.*\.html$/.test(p));
             const cssFiles = paths.filter((p) => /^contributors\/[^/]+\/.*\.css$/.test(p));
             const imageExtPattern = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i;
             const newImageFiles = paths.filter((p) => /^contributors\//.test(p) && imageExtPattern.test(p));
 
+            // Read from the base checkout: a PR must not get to edit the list
+            // it's being checked against.
             const { words } = JSON.parse(fs.readFileSync(".github/scripts/blocklist.json", "utf8"));
             const flags = [];
 
@@ -132,7 +163,7 @@ jobs:
             for (const file of cardFiles) {
               let json;
               try {
-                json = JSON.parse(fs.readFileSync(file, "utf8"));
+                json = JSON.parse(await readPrFile(file));
               } catch (e) {
                 continue; // already reported by the card.json validator
               }
@@ -154,8 +185,9 @@ jobs:
             for (const file of htmlFiles.concat(cssFiles)) {
               let text;
               try {
-                text = fs.readFileSync(file, "utf8");
+                text = await readPrFile(file);
               } catch (e) {
+                flags.push(`Could not read \`${file}\` to scan it — worth a look by hand.`);
                 continue;
               }
               const srcMatches = [...text.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)].map((m) => m[1]);
@@ -177,22 +209,32 @@ jobs:
             return flags;
 
       - name: Post summary comment
+        # Runs even if a step above blew up, so a failing check always explains
+        # itself instead of leaving a bare red X.
+        if: always()
         uses: actions/github-script@v7
         env:
           ERRORS: ${{ steps.validate.outputs.errors }}
           WARNINGS: ${{ steps.validate.outputs.warnings }}
           FLAGS: ${{ steps.moderate.outputs.flags }}
           SELF_SCOPED: ${{ steps.scope.outputs.selfScoped }}
+          CHECKS_RAN: ${{ steps.validate.outcome == 'success' && steps.scope.outcome == 'success' && steps.moderate.outcome == 'success' }}
         with:
           script: |
+            const MARKER = "<!-- automated-pr-check -->";
+
             const errors = JSON.parse(process.env.ERRORS || '[]');
             const warnings = JSON.parse(process.env.WARNINGS || '[]');
             const flags = JSON.parse(process.env.FLAGS || '[]');
             const selfScoped = process.env.SELF_SCOPED === 'true';
+            const checksRan = process.env.CHECKS_RAN === 'true';
 
-            const lines = ["### 🔍 Automated PR check\n"];
+            const lines = [MARKER, "### 🔍 Automated PR check\n"];
 
-            if (errors.length > 0) {
+            if (!checksRan) {
+              // Without this the empty outputs of a crashed step would read as a pass.
+              lines.push("**🧰 This check didn't finish — that's a problem with the check, not your PR.** A maintainer will look at the run log.\n");
+            } else if (errors.length > 0) {
               lines.push("**❌ card.json problems (please fix):**");
               lines.push(...errors.map((e) => `- ${e}`));
               lines.push("");
@@ -202,7 +244,7 @@ jobs:
 
             if (!selfScoped) {
               lines.push("**📁 Scope:** this PR touches files outside `contributors/<your-username>/` — worth a closer look.\n");
-            } else {
+            } else if (checksRan) {
               lines.push("✅ Only touches the author's own contributor folder.\n");
             }
 
@@ -222,13 +264,35 @@ jobs:
               "_This repo reviews and merges every PR by hand — no auto-merge here. A maintainer will take a look soon!_"
             );
 
-            await github.rest.issues.createComment({
+            const body = lines.join("\n");
+            const issue_number = context.payload.pull_request.number;
+
+            // Reuse our own comment so pushing to the branch doesn't stack up copies.
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: lines.join("\n"),
+              issue_number,
             });
+            const existing = comments.find((c) => c.user.type === "Bot" && c.body?.includes(MARKER));
 
-            if (errors.length > 0) {
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body,
+              });
+            }
+
+            if (!checksRan) {
+              core.setFailed("PR check did not complete");
+            } else if (errors.length > 0) {
               core.setFailed("card.json validation failed");
             }
