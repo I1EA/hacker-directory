@@ -202,25 +202,7 @@ Then open `http://localhost:8000` in your browser.
 
 ---
 
-## Step 6 — Add yourself to the manifest
-
-Open `contributors/manifest.json` and add your username to the list
-(don't forget the comma after the previous entry):
-
-```json
-[
-  "talen",
-  "your-username"
-]
-```
-
-This is the one file where you're touching something outside your own
-folder — that's expected and fine, it's just a list of usernames so the
-homepage knows whose cards to load.
-
----
-
-## Step 7 — Open a pull request
+## Step 6 — Open a pull request
 
 ### The no-download way
 
@@ -237,7 +219,7 @@ for you. Follow that prompt, or:
 
 ```bash
 git checkout -b add-your-username
-git add contributors/your-username contributors/manifest.json
+git add contributors/your-username
 git commit -m "Add your-username to the directory"
 git push origin add-your-username
 ```
@@ -263,6 +245,9 @@ That's it! You've opened your first pull request. 🎉
   only touched your own folder, and does a quick automated pass for
   anything that might need a closer look (flagged words, embedded images
   that aren't your GitHub avatar). It posts a summary comment either way.
+- You don't need to touch `contributors/manifest.json` — the list the
+  homepage reads is rebuilt from the contributor folders when your PR is
+  merged.
 - This project **doesn't auto-merge** — every PR gets read and merged by
   a real person. That's on purpose: with a small community, we'd rather
   actually see each new contributor than wave them through a bot. It
