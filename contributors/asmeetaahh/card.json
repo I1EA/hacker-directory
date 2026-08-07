@@ -1,11 +1,11 @@
 {
-  "name": "Your Name",
-  "role": "What you do — e.g. CS Student, Frontend Dev, Robotics Nerd",
-  "university": "Your school or company (optional)",
-  "github": "your-github-username",
-  "bio": "One or two sentences about what you build, what you're learning, or what you're into.",
-  "tags": ["Python", "JavaScript", "Your Tag Here"],
+  "name": "Asmita Majumdar",
+  "role": "Frontend developer",
+  "university": "Bangalore Institute of Technology",
+  "github": "asmeetaahh",
+  "bio": "I have build an amazon like website.I love web development",
+  "tags": ["Python", "JavaScript", "C++"],
   "links": {
-    "website": "https://your-site.example.com"
+    "website": ""
   }
 }
