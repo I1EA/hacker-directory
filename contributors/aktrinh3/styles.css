@@ -23,6 +23,7 @@
   font-family: var(--font-goofy);
   font-size: 2.3rem;
   font-weight: 700;
+  color: #6b63b2;
   margin: 0;
   letter-spacing: -0.01em;
 }
@@ -148,16 +149,12 @@ section.block h2::before {
   data-pill value that doesn't have a matching rule just falls back to
   plain text, it won't inherit Talen's colors.
 */
-.pill[data-pill="python"] { --pill-color: #3ef2a1; }
+.pill[data-pill="python"] { --pill-color: #7bcb4a; }
 .pill[data-pill="cpp"] { --pill-color: #4d8bff; }
-.pill[data-pill="cuda"] { --pill-color: #ff5cb3; }
-.pill[data-pill="react"] { --pill-color: #ffd23f; }
-.pill[data-pill="oss"] { --pill-color: #33d9c1; }
-.pill[data-pill="bayes"] { --pill-color: #a56dff; }
+.pill[data-pill="java"] { --pill-color: #ad86ec; }
+.pill[data-pill="oss"] { --pill-color: #e55757; }
 
-[data-theme="light"] .pill[data-pill="python"] { --pill-color: #2fb894; }
+[data-theme="light"] .pill[data-pill="python"] { --pill-color: #218a3a; }
 [data-theme="light"] .pill[data-pill="cpp"] { --pill-color: #3fa9e0; }
-[data-theme="light"] .pill[data-pill="cuda"] { --pill-color: #e0538c; }
-[data-theme="light"] .pill[data-pill="react"] { --pill-color: #e08a3f; }
-[data-theme="light"] .pill[data-pill="oss"] { --pill-color: #2fa88f; }
-[data-theme="light"] .pill[data-pill="bayes"] { --pill-color: #8a63e6; }
+[data-theme="light"] .pill[data-pill="oss"] { --pill-color: #a82f37; }
+[data-theme="light"] .pill[data-pill="java"] { --pill-color: #8a63e6; }
