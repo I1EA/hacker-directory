@@ -18,8 +18,7 @@ card, feel free to introduce yourself! -->
 
 - [ ] My folder is `contributors/<my-github-username>/`, all lowercase
 - [ ] `card.json` is valid JSON and includes `name`, `github`, `bio`, and `tags`
-- [ ] I added my username to `contributors/manifest.json`
-- [ ] I only touched files inside my own contributor folder (plus the manifest line)
+- [ ] I only touched files inside my own contributor folder
 - [ ] I previewed my page locally and it looks right in both light and dark mode
 
 <!--

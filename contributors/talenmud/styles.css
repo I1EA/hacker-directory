@@ -82,6 +82,11 @@ section.block h2::before {
   border: 1px solid var(--border);
   background: #000;
 }
+#mcmc-canvas-wrap canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
 .viz-controls {
   display: flex;
   gap: 0.7rem;
